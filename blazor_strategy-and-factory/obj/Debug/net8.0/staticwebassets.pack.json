@@ -1,0 +1,41 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\felix\\Desktop\\Blazor\\blazor_strategy-and-factory\\blazor_strategy-and-factory\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\blazor_strategy_and_factory.bundle.scp.css",
+      "PackagePath": "staticwebassets\\blazor_strategy_and_factory.gvxdzcrxng.bundle.scp.css"
+    },
+    {
+      "Id": "C:\\Users\\felix\\Desktop\\Blazor\\blazor_strategy-and-factory\\blazor_strategy-and-factory\\wwwroot\\app.css",
+      "PackagePath": "staticwebassets\\app.css"
+    },
+    {
+      "Id": "C:\\Users\\felix\\Desktop\\Blazor\\blazor_strategy-and-factory\\blazor_strategy-and-factory\\wwwroot\\css\\oracle-test.css",
+      "PackagePath": "staticwebassets\\css\\oracle-test.css"
+    },
+    {
+      "Id": "C:\\Users\\felix\\Desktop\\Blazor\\blazor_strategy-and-factory\\blazor_strategy-and-factory\\wwwroot\\js\\error-handler.js",
+      "PackagePath": "staticwebassets\\js\\error-handler.js"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.blazor_strategy_and_factory.Microsoft.AspNetCore.StaticWebAssetEndpoints.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssetEndpoints.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.blazor_strategy_and_factory.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.blazor_strategy_and_factory.props",
+      "PackagePath": "build\\blazor_strategy_and_factory.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.blazor_strategy_and_factory.props",
+      "PackagePath": "buildMultiTargeting\\blazor_strategy_and_factory.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.blazor_strategy_and_factory.props",
+      "PackagePath": "buildTransitive\\blazor_strategy_and_factory.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

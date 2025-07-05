@@ -1,0 +1,66 @@
+/* Oracle Test 頁面專用樣式 */
+.oracle-test-container {
+    isolation: isolate;
+    position: relative;
+    z-index: 1;
+}
+
+.oracle-test-container * {
+    pointer-events: auto;
+}
+
+.oracle-test-container .btn {
+    position: relative;
+    z-index: 2;
+}
+
+.oracle-test-container .btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.oracle-test-container .btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* 防止擴展程式干擾的保護層 */
+.oracle-test-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 載入動畫 */
+.oracle-test-loading {
+    pointer-events: none;
+}
+
+.oracle-test-loading .spinner-border {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* 測試結果區域 */
+.oracle-test-result {
+    position: relative;
+    z-index: 1;
+}
+
+.oracle-test-result pre {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

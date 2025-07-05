@@ -1,0 +1,482 @@
+@page "/financial-report"
+@rendermode InteractiveServer
+@using blazor_strategy_and_factory.Models
+@using blazor_strategy_and_factory.Services.Factory
+@using blazor_strategy_and_factory.Services.DataSources
+@using blazor_strategy_and_factory.Services.OutputComponents
+@using blazor_strategy_and_factory.Services
+@inject IPageFactory PageFactory
+@inject IDataSourceService DataSourceService
+@inject IOutputComponentService OutputComponentService
+@inject FinancialAnalysisService FinancialAnalysisService
+@inject OracleSimulationService OracleSimulationService
+
+<PageTitle>金融資訊摘要系統</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- 左側設定面板 -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5>📊 設定面板</h5>
+                </div>
+                <div class="card-body">
+                    <!-- 基本資訊輸入 -->
+                    <div class="mb-3">
+                        <label class="form-label">員工號碼</label>
+                        <input type="text" class="form-control" @bind="request.EmployeeId" placeholder="例如: E001, E002, E003" />
+                        <div class="form-text">範例: E001 (王小明), E002 (李美麗), E003 (張志強)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">區域</label>
+                        <select class="form-select" @bind="request.Region">
+                            <option value="">請選擇區域</option>
+                            <option value="台北">台北</option>
+                            <option value="新竹">新竹</option>
+                            <option value="台中">台中</option>
+                            <option value="高雄">高雄</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">開始日期</label>
+                        <input type="date" class="form-control" @bind="request.StartDate" />
+                        <div class="form-text">建議範圍: 2020-01-01 至 2024-12-31</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">結束日期</label>
+                        <input type="date" class="form-control" @bind="request.EndDate" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">提示詞</label>
+                        <textarea class="form-control" rows="3" @bind="request.Prompt" placeholder="例如: 顯示薪資總額、分析員工分佈、統計交易記錄等"></textarea>
+                    </div>
+                    
+                    <!-- 資料源選擇 -->
+                    <div class="mb-3">
+                        <label class="form-label">資料表選擇</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="datasource-employee" @bind="employeeSelected" />
+                            <label class="form-check-label" for="datasource-employee">
+                                <i class="bi bi-person-badge"></i> 員工資料 (EMPLOYEES)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="datasource-financial" @bind="financialSelected" />
+                            <label class="form-check-label" for="datasource-financial">
+                                <i class="bi bi-currency-dollar"></i> 財務記錄 (FINANCIAL_RECORDS)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="datasource-announcement" @bind="announcementSelected" />
+                            <label class="form-check-label" for="datasource-announcement">
+                                <i class="bi bi-megaphone"></i> 公司重訊 (COMPANY_ANNOUNCEMENTS)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- 輸出元件選擇 -->
+                    <div class="mb-3">
+                        <label class="form-label">輸出元件</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="output-sql" @bind="sqlSelected" />
+                            <label class="form-check-label" for="output-sql">
+                                <i class="bi bi-code-square"></i> SQL查詢語句
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="output-table" @bind="tableSelected" />
+                            <label class="form-check-label" for="output-table">
+                                <i class="bi bi-table"></i> 資料表格
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="output-summary" @bind="summarySelected" />
+                            <label class="form-check-label" for="output-summary">
+                                <i class="bi bi-file-earmark-text"></i> 摘要報告
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-primary w-100" @onclick="GenerateReport" disabled="@isGenerating">
+                        @if (isGenerating)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span>生成中...</span>
+                        }
+                        else
+                        {
+                            <span>🚀 生成報表</span>
+                        }
+                    </button>
+                    
+                    <!-- 測試按鈕 -->
+                    <button class="btn btn-info w-100 mt-2" @onclick="TestDataSources" disabled="@isGenerating">
+                        🔍 測試資料源
+                    </button>
+                    
+                    @if (!string.IsNullOrEmpty(testResults))
+                    {
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <h6>測試結果：</h6>
+                            <pre class="small">@testResults</pre>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右側報表顯示區域 -->
+        <div class="col-md-9">
+            <!-- AI分析結果顯示 -->
+            @if (analysisResult != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>🤖 AI 金融分析報告 - 員工 @analysisResult.Employee?.EmployeeName (@analysisResult.Employee?.EmployeeId)</h5>
+                        <small class="text-muted">生成時間: @analysisResult.GeneratedAt.ToString("yyyy-MM-dd HH:mm:ss")</small>
+                    </div>
+                    <div class="card-body">
+                        <!-- 員工基本資訊 -->
+                        @if (analysisResult.Employee != null)
+                        {
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6>👤 員工基本資訊</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>姓名:</strong> @analysisResult.Employee.EmployeeName</li>
+                                        <li><strong>部門:</strong> @analysisResult.Employee.Department</li>
+                                        <li><strong>職位:</strong> @analysisResult.Employee.Position</li>
+                                        <li><strong>區域:</strong> @analysisResult.Employee.Region</li>
+                                        <li><strong>薪資:</strong> @analysisResult.Employee.Salary.ToString("C")</li>
+                                        <li><strong>到職日期:</strong> @analysisResult.Employee.HireDate.ToString("yyyy-MM-dd")</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>📊 投資統計</h6>
+                                    @if (analysisResult.InvestmentStatistics != null)
+                                    {
+                                        <ul class="list-unstyled">
+                                            <li><strong>總投資金額:</strong> @analysisResult.InvestmentStatistics.TotalInvestment.ToString("C")</li>
+                                            <li><strong>總賣出金額:</strong> @analysisResult.InvestmentStatistics.TotalDivestment.ToString("C")</li>
+                                            <li><strong>淨投資金額:</strong> @analysisResult.InvestmentStatistics.NetInvestment.ToString("C")</li>
+                                            <li><strong>交易次數:</strong> @analysisResult.InvestmentStatistics.TransactionCount</li>
+                                            <li><strong>平均交易金額:</strong> @analysisResult.InvestmentStatistics.AverageTransactionAmount.ToString("C")</li>
+                                            <li><strong>投資股票:</strong> @string.Join(", ", analysisResult.InvestmentStatistics.StockCodes)</li>
+                                        </ul>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        
+                        <!-- AI投資摘要 -->
+                        @if (!string.IsNullOrEmpty(analysisResult.InvestmentSummary))
+                        {
+                            <div class="alert alert-info mb-3">
+                                <h6>💡 AI 投資摘要</h6>
+                                <p class="mb-0">@analysisResult.InvestmentSummary</p>
+                            </div>
+                        }
+                        
+                        <!-- 完整AI分析 -->
+                        @if (!string.IsNullOrEmpty(analysisResult.AIAnalysis))
+                        {
+                            <div class="alert alert-primary">
+                                <h6>🔍 詳細AI分析</h6>
+                                <div style="white-space: pre-line;">@analysisResult.AIAnalysis</div>
+                            </div>
+                        }
+                        
+                        <!-- 財務記錄表格 -->
+                        @if (analysisResult.FinancialRecords.Any())
+                        {
+                            <div class="mt-4">
+                                <h6>💰 財務交易記錄</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>日期</th>
+                                                <th>股票代號</th>
+                                                <th>公司名稱</th>
+                                                <th>交易類型</th>
+                                                <th>數量</th>
+                                                <th>每股價格</th>
+                                                <th>總金額</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var record in analysisResult.FinancialRecords)
+                                            {
+                                                <tr>
+                                                    <td>@record.RecordDate.ToString("yyyy-MM-dd")</td>
+                                                    <td>@record.StockCode</td>
+                                                    <td>@record.CompanyName</td>
+                                                    <td>
+                                                        <span class="badge @(record.TransactionType == "買入" ? "bg-success" : "bg-danger")">
+                                                            @record.TransactionType
+                                                        </span>
+                                                    </td>
+                                                    <td>@record.Quantity</td>
+                                                    <td>@record.PricePerShare.ToString("C")</td>
+                                                    <td>@record.Amount.ToString("C")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+                        
+                        <!-- 相關公司重訊 -->
+                        @if (analysisResult.CompanyAnnouncements.Any())
+                        {
+                            <div class="mt-4">
+                                <h6>📢 相關公司重訊</h6>
+                                @foreach (var announcement in analysisResult.CompanyAnnouncements)
+                                {
+                                    <div class="card mb-2">
+                                        <div class="card-body py-2">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="card-title mb-1">@announcement.Title</h6>
+                                                    <p class="card-text small mb-1">@announcement.Content</p>
+                                                    <small class="text-muted">
+                                                        @announcement.StockCode (@announcement.CompanyName) - 
+                                                        @announcement.PublishedDate.ToString("yyyy-MM-dd") - 
+                                                        @announcement.AnnouncementType
+                                                    </small>
+                                                </div>
+                                                <span class="badge @(announcement.Priority == "高" ? "bg-danger" : "bg-secondary")">
+                                                    @announcement.Priority
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            
+            <!-- 原有的報表顯示 -->
+            @if (pageConfig != null)
+            {
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4>@pageConfig.PageTitle</h4>
+                        <small class="text-muted">生成時間: @pageConfig.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</small>
+                    </div>
+                    <div class="card-body">
+                        @if (pageConfig.DataResponses.Any())
+                        {
+                            <!-- 資料源狀態顯示 -->
+                            <div class="mb-4">
+                                <h6>📡 資料源狀態</h6>
+                                <div class="row">
+                                    @foreach (var response in pageConfig.DataResponses)
+                                    {
+                                        <div class="col-md-4 mb-2">
+                                            <div class="alert @(response.IsSuccess ? "alert-success" : "alert-danger") py-2">
+                                                <small>
+                                                    @if (response.IsSuccess)
+                                                    {
+                                                        <span>✅</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>❌</span>
+                                                    }
+                                                    @string.Join(", ", response.Messages)
+                                                </small>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            
+                            <!-- 動態生成的輸出元件 -->
+                            @foreach (var component in pageConfig.OutputComponents)
+                            {
+                                <div class="mb-4">
+                                    @foreach (var dataResponse in pageConfig.DataResponses)
+                                    {
+                                        @component.RenderComponent(dataResponse)
+                                    }
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted py-5">
+                                <div style="font-size: 3rem;">📊</div>
+                                <h5>請設定參數並生成報表</h5>
+                                <p>選擇所需的資料來源和輸出元件，然後點擊「生成報表」按鈕</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-body text-center text-muted py-5">
+                        <div style="font-size: 3rem;">📋</div>
+                        <h5>Oracle資料庫金融資訊摘要系統</h5>
+                        <p>使用左側面板設定您的需求，系統將自動組合適當的資料表和顯示元件</p>
+                        <hr />
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>🎯 功能特色</h6>
+                                <ul class="list-unstyled text-start">
+                                    <li>✅ 策略模式資料源</li>
+                                    <li>✅ 工廠模式頁面組合</li>
+                                    <li>✅ 動態元件生成</li>
+                                    <li>✅ 多資料源整合</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>📊 支援資料表</h6>
+                                <ul class="list-unstyled text-start">
+                                    <li><i class="bi bi-person-badge text-primary"></i> 員工資料 (EMPLOYEES)</li>
+                                    <li><i class="bi bi-currency-dollar text-success"></i> 財務記錄 (FINANCIAL_RECORDS)</li>
+                                    <li><i class="bi bi-megaphone text-warning"></i> 公司重訊 (COMPANY_ANNOUNCEMENTS)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="row">
+                            <div class="col-12">
+                                <h6>💡 查詢範例</h6>
+                                <div class="text-start">
+                                    <p><strong>範例 1 - 查詢特定員工:</strong></p>
+                                    <small class="text-muted">
+                                        • 員工號碼: E001<br/>
+                                        • 區域: 台北<br/>
+                                        • 勾選: 員工資料 + 資料表格
+                                    </small>
+                                    
+                                    <p class="mt-3"><strong>範例 2 - 查看財務記錄:</strong></p>
+                                    <small class="text-muted">
+                                        • 區域: 新竹<br/>
+                                        • 開始日期: 2024-01-01<br/>
+                                        • 結束日期: 2024-12-31<br/>
+                                        • 勾選: 財務記錄 + SQL查詢 + 資料表格
+                                    </small>
+                                    
+                                    <p class="mt-3"><strong>範例 3 - 查看公司重訊:</strong></p>
+                                    <small class="text-muted">
+                                        • 開始日期: 2024-06-01<br/>
+                                        • 結束日期: 2024-07-31<br/>
+                                        • 提示詞: 顯示最新的公司公告<br/>
+                                        • 勾選: 公司重訊 + 摘要報告
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private FinancialDataRequest request = new();
+    private PageConfiguration? pageConfig;
+    private EmployeeFinancialAnalysisResult? analysisResult;
+    private bool isGenerating = false;
+    private string testResults = string.Empty;
+    
+    // 選擇狀態
+    private bool employeeSelected = false;
+    private bool financialSelected = false;
+    private bool announcementSelected = false;
+    private bool sqlSelected = false;
+    private bool tableSelected = false;
+    private bool chartSelected = false;
+    private bool summarySelected = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // 設定預設的範例日期範圍
+        request.StartDate = new DateTime(2020, 1, 1);
+        request.EndDate = new DateTime(2024, 12, 31);
+        await Task.CompletedTask;
+    }
+
+    private async Task GenerateReport()
+    {
+        // 清空之前的選擇
+        request.DataSources.Clear();
+        request.OutputComponents.Clear();
+        
+        // 根據選擇狀態設定資料表
+        if (employeeSelected) request.DataSources.Add("員工資料");
+        if (financialSelected) request.DataSources.Add("財務記錄");
+        if (announcementSelected) request.DataSources.Add("公司公告");
+        
+        // 根據選擇狀態設定輸出元件
+        if (sqlSelected) request.OutputComponents.Add("SQL查詢");
+        if (tableSelected) request.OutputComponents.Add("資料表格");
+        if (chartSelected) request.OutputComponents.Add("圖表");
+        if (summarySelected) request.OutputComponents.Add("摘要報告");
+        
+        if (!request.DataSources.Any() || !request.OutputComponents.Any())
+        {
+            return;
+        }
+
+        isGenerating = true;
+        StateHasChanged();
+
+        try
+        {
+            // 如果提供了員工ID，使用新的分析服務
+            if (!string.IsNullOrEmpty(request.EmployeeId))
+            {
+                analysisResult = await FinancialAnalysisService.GenerateEmployeeFinancialAnalysisAsync(request);
+            }
+            
+            // 同時使用原有的頁面工廠來生成報表
+            pageConfig = await PageFactory.CreatePageAsync(request);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ 生成報表時發生錯誤: {ex.Message}");
+        }
+        finally
+        {
+            isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task TestDataSources()
+    {
+        isGenerating = true;
+        testResults = string.Empty;
+        StateHasChanged();
+        
+        try
+        {
+            var employeeId = string.IsNullOrEmpty(request.EmployeeId) ? "E001" : request.EmployeeId;
+            testResults = await OracleSimulationService.TestDataSourceQueriesAsync(employeeId);
+        }
+        catch (Exception ex)
+        {
+            testResults = $"❌ 測試失敗: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -1,0 +1,110 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>Oracle資料庫金融資訊摘要系統</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="jumbotron bg-primary text-white p-5 rounded mb-4">
+                <h1 class="display-4">🏦 Oracle資料庫金融資訊摘要系統</h1>
+                <p class="lead">使用策略模式和工廠模式，動態組合不同資料表的查詢和展示功能。</p>
+                <hr class="my-4 border-light">
+                <p>本系統展示了如何透過設計模式實現靈活的資料查詢和展示架構。</p>
+                <a class="btn btn-light btn-lg" href="/financial-report" role="button">
+                    🚀 開始使用系統
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">🎯 系統特色</h5>
+                    <ul class="list-unstyled">
+                        <li>✅ <strong>策略模式</strong> - 封裝不同資料表的查詢邏輯</li>
+                        <li>✅ <strong>工廠模式</strong> - 動態組合頁面元件</li>
+                        <li>✅ <strong>Oracle SQL</strong> - 支援Oracle資料庫語法</li>
+                        <li>✅ <strong>實時查詢</strong> - 即時生成SQL並執行</li>
+                        <li>✅ <strong>多種展示</strong> - 表格、圖表、摘要等多種展示方式</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">📊 支援資料表</h5>
+                    <ul class="list-unstyled">
+                        <li>👥 <strong>EMPLOYEES</strong> - 員工基本資料</li>
+                        <li>💰 <strong>FINANCIAL_RECORDS</strong> - 財務交易記錄</li>
+                        <li>📢 <strong>COMPANY_ANNOUNCEMENTS</strong> - 公司重要公告</li>
+                        <li>📈 <strong>MARKET_DATA</strong> - 市場交易資料</li>
+                        <li>💼 <strong>BUDGET_RECORDS</strong> - 預算執行資料</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">🚀 使用說明</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="display-4 text-primary">1</div>
+                                <h6>選擇資料表</h6>
+                                <p>從5個不同的資料表中選擇您需要的資料來源</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="display-4 text-success">2</div>
+                                <h6>設定查詢條件</h6>
+                                <p>輸入員工號、區域、日期範圍等查詢條件</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="display-4 text-info">3</div>
+                                <h6>選擇展示方式</h6>
+                                <p>選擇SQL查詢、資料表格、圖表或摘要等展示方式</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="display-4 text-warning">4</div>
+                                <h6>生成報表</h6>
+                                <p>系統自動生成Oracle SQL並執行查詢，展示結果</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">💡 設計模式說明</h5>
+                    <p class="card-text">
+                        本系統採用<strong>策略模式</strong>封裝不同資料表的查詢邏輯，每個資料表對應一個策略類，
+                        並使用<strong>工廠模式</strong>根據使用者選擇動態組合查詢策略和展示元件，
+                        實現了高度靈活和可擴展的架構設計。
+                    </p>
+                    <a href="/financial-report" class="btn btn-primary">
+                        📊 立即體驗
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,50 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">🏦 Oracle金融資訊系統</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">🏠 首頁</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/financial-report">📊 金融報表</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/system-test">🧪 系統測試</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/oracle-test">🗄️ Oracle測試</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="content px-4">
+        @Body
+    </main>
+
+    <footer class="bg-light py-3 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <small class="text-muted">
+                        © 2024 Oracle金融資訊系統 - 策略模式與工廠模式示範
+                    </small>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>

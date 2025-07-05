@@ -1,0 +1,477 @@
+@page "/oracle-test"
+@rendermode InteractiveServer
+@using blazor_strategy_and_factory.Data
+@using blazor_strategy_and_factory.Services
+@using Microsoft.EntityFrameworkCore
+@inject FinancialDbContext DbContext
+@inject IConfiguration Configuration
+@inject OracleSimulationService OracleSimulation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Oracle資料庫測試</PageTitle>
+
+<div class="container mt-4">
+    <h1>🗄️ Oracle資料庫連線測試</h1>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>資料庫連線資訊</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>目前設定</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>使用Oracle:</strong> @(useOracle ? "是" : "否 (InMemory)")</li>
+                                <li><strong>模擬模式:</strong> @(Configuration.GetValue<bool>("SimulationMode", false) ? "是" : "否")</li>
+                                <li><strong>資料庫提供者:</strong> @databaseProvider</li>
+                                <li><strong>連線字串:</strong> @(connectionString ?? "N/A")</li>
+                                <li><strong>應用程式狀態:</strong> <span class="badge bg-success">正常運行</span></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>操作</h6>
+                            <div class="alert alert-info">
+                                <small>
+                                    <strong>注意：</strong> 如果看到Chrome擴展程式相關的錯誤訊息，這些是瀏覽器擴展程式的問題，
+                                    不會影響我們的Blazor應用程式功能。
+                                </small>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" 
+                                        @onclick="HandleTestConnection" 
+                                        type="button">
+                                    🔗 測試連線
+                                </button>
+                                <button class="btn btn-info" 
+                                        @onclick="HandleCheckMigrations" 
+                                        disabled="@isLoading"
+                                        type="button">
+                                    📋 檢查Migrations
+                                </button>
+                                <button class="btn btn-warning" 
+                                        @onclick="HandleCreateMigration" 
+                                        disabled="@isLoading"
+                                        type="button">
+                                    📝 建立Migration
+                                </button>
+                                <button class="btn btn-success" 
+                                        @onclick="HandleApplyMigrations" 
+                                        disabled="@isLoading"
+                                        type="button">
+                                    ⚡ 套用Migrations
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>測試結果</h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>正在測試...</p>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(testResult))
+                    {
+                        <div class="alert @(isSuccess ? "alert-success" : "alert-danger")" role="alert">
+                            <h6>@(isSuccess ? "✅ 成功" : "❌ 錯誤")</h6>
+                            <pre>@testResult</pre>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Oracle SQL 腳本生成器</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-outline-primary" 
+                            @onclick="GenerateCreateScript" 
+                            disabled="@isLoading"
+                            type="button">
+                        📝 生成建表腳本
+                    </button>
+                    @if (!string.IsNullOrEmpty(sqlScript))
+                    {
+                        <div class="mt-3">
+                            <h6>Oracle建表腳本：</h6>
+                            <div class="border p-3 bg-light">
+                                <pre style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 12px;">@sqlScript</pre>
+                            </div>
+                            <button class="btn btn-sm btn-secondary mt-2" 
+                                    @onclick="CopyToClipboard" 
+                                    type="button">
+                                📋 複製到剪貼簿
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn btn-primary" @onclick="SimpleTest">測試按鈕</button>
+    <button class="btn btn-primary" @onclick="HandleTestConnectionSimple">🔗 測試連線 (簡單版)</button>
+</div>
+
+@code {
+    private bool isLoading = false;
+    private string testResult = "";
+    private bool isSuccess = false;
+    private bool useOracle = false;
+    private string databaseProvider = "";
+    private string? connectionString = "";
+    private string sqlScript = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Console.WriteLine("OracleTest 頁面初始化開始");
+            
+            useOracle = Configuration.GetValue<bool>("UseOracleDatabase", false);
+            connectionString = Configuration.GetConnectionString("DefaultConnection");
+            databaseProvider = DbContext.Database.ProviderName ?? "Unknown";
+            
+            Console.WriteLine($"初始化完成 - UseOracle: {useOracle}, SimulationMode: {Configuration.GetValue<bool>("SimulationMode", false)}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"初始化錯誤: {ex.Message}");
+        }
+    }
+
+    // 包裝方法，提供額外的錯誤處理
+    private async Task HandleTestConnection()
+    {
+        Console.WriteLine("🔥 HandleTestConnection 被調用！");
+        
+        if (isLoading)
+        {
+            Console.WriteLine("⏳ 正在載入中，忽略重複點擊");
+            return;
+        }
+
+        try
+        {
+            Console.WriteLine("✅ 開始執行測試連線");
+            isLoading = true;
+            StateHasChanged();
+            
+            await TestConnection();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ HandleTestConnection 錯誤: {ex.Message}");
+            testResult = $"❌ 按鈕處理錯誤: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleCheckMigrations()
+    {
+        Console.WriteLine("🔍 HandleCheckMigrations 被調用");
+        if (isLoading) return;
+        
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            await CheckMigrations();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ HandleCheckMigrations 錯誤: {ex.Message}");
+            testResult = $"❌ 檢查 Migrations 錯誤: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleCreateMigration()
+    {
+        Console.WriteLine("📝 HandleCreateMigration 被調用");
+        if (isLoading) return;
+        
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            await CreateMigration();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ HandleCreateMigration 錯誤: {ex.Message}");
+            testResult = $"❌ 建立 Migration 錯誤: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleApplyMigrations()
+    {
+        Console.WriteLine("⚡ HandleApplyMigrations 被調用");
+        if (isLoading) return;
+        
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            await ApplyMigrations();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ HandleApplyMigrations 錯誤: {ex.Message}");
+            testResult = $"❌ 套用 Migrations 錯誤: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task TestConnection()
+    {
+        Console.WriteLine("🚀 TestConnection 方法開始");
+        
+        try
+        {
+            testResult = "";
+            StateHasChanged();
+            
+            var simulationMode = Configuration.GetValue<bool>("SimulationMode", false);
+            Console.WriteLine($"📋 模擬模式: {simulationMode}");
+            
+            Console.WriteLine("🔗 正在調用 OracleSimulation.TestOracleConnectionAsync()...");
+            var canConnect = await OracleSimulation.TestOracleConnectionAsync();
+            Console.WriteLine($"📊 連線測試結果: {canConnect}");
+            
+            if (canConnect)
+            {
+                testResult = $"✅ 資料庫連線成功！\n" +
+                           $"模式: {(simulationMode ? "模擬模式" : "實際連線")}\n" +
+                           $"提供者: {DbContext.Database.ProviderName}\n" +
+                           $"連線字串: {connectionString}\n" +
+                           $"測試時間: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                isSuccess = true;
+                Console.WriteLine("✅ 連線測試成功");
+            }
+            else
+            {
+                testResult = "❌ 無法連線到資料庫";
+                isSuccess = false;
+                Console.WriteLine("❌ 連線測試失敗");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"💥 TestConnection 異常: {ex.Message}");
+            testResult = $"❌ 連線測試錯誤:\n{ex.Message}\n錯誤類型: {ex.GetType().Name}";
+            isSuccess = false;
+        }
+        
+        Console.WriteLine("🏁 TestConnection 方法結束");
+        StateHasChanged();
+    }
+
+    private async Task CheckMigrations()
+    {
+        isLoading = true;
+        testResult = "";
+        StateHasChanged();
+
+        try
+        {
+            var simulationMode = Configuration.GetValue<bool>("SimulationMode", false);
+            var pendingMigrations = await OracleSimulation.GetPendingMigrationsAsync();
+            
+            if (simulationMode)
+            {
+                testResult = $"📋 Migration狀態 (模擬模式):\n\n" +
+                            $"待套用的Migrations:\n" +
+                            string.Join("\n", pendingMigrations.Select(m => $"  ⏳ {m}")) + "\n\n" +
+                            $"注意：這是模擬模式，實際migration狀態請連線到真實Oracle資料庫查看。";
+            }
+            else
+            {
+                var appliedMigrations = await DbContext.Database.GetAppliedMigrationsAsync();
+                testResult = $"📋 Migration狀態:\n\n" +
+                            $"已套用的Migrations ({appliedMigrations.Count()}):\n" +
+                            string.Join("\n", appliedMigrations.Select(m => $"  ✅ {m}")) + "\n\n" +
+                            $"待套用的Migrations ({pendingMigrations.Count()}):\n" +
+                            string.Join("\n", pendingMigrations.Select(m => $"  ⏳ {m}"));
+
+                if (!pendingMigrations.Any())
+                {
+                    testResult += "\n\n✅ 所有Migrations都已套用！";
+                }
+            }
+
+            isSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            testResult = $"❌ 檢查Migration時發生錯誤:\n{ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CreateMigration()
+    {
+        isLoading = true;
+        testResult = "";
+        StateHasChanged();
+
+        try
+        {
+            var (success, output) = await OracleSimulation.CreateMigrationAsync("NewMigration");
+            testResult = output;
+            isSuccess = success;
+        }
+        catch (Exception ex)
+        {
+            testResult = $"❌ 建立 Migration 時發生錯誤: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ApplyMigrations()
+    {
+        isLoading = true;
+        testResult = "";
+        StateHasChanged();
+
+        try
+        {
+            var (success, output) = await OracleSimulation.ApplyMigrationsAsync();
+            testResult = output;
+            isSuccess = success;
+        }
+        catch (Exception ex)
+        {
+            testResult = $"❌ 套用 Migration 時發生錯誤: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GenerateCreateScript()
+    {
+        isLoading = true;
+        testResult = "";
+        sqlScript = "";
+        StateHasChanged();
+
+        try
+        {
+            sqlScript = await OracleSimulation.GenerateCreateScriptAsync();
+            if (!string.IsNullOrEmpty(sqlScript))
+            {
+                testResult = "✅ Oracle 建表腳本已成功生成。";
+                isSuccess = true;
+            }
+            else
+            {
+                testResult = "❌ 無法生成 SQL 腳本。";
+                isSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            testResult = $"❌ 生成腳本時發生錯誤: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (!string.IsNullOrEmpty(sqlScript))
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", sqlScript);
+                testResult = "✅ SQL 腳本已成功複製到剪貼簿！";
+                isSuccess = true;
+            }
+            catch (Exception ex)
+            {
+                testResult = $"❌ 複製失敗: {ex.Message}";
+                isSuccess = false;
+            }
+        }
+        else
+        {
+            testResult = "❌ 沒有可複製的 SQL 腳本。請先生成腳本。";
+            isSuccess = false;
+        }
+        StateHasChanged();
+    }
+
+    private void SimpleTest()
+    {
+        Console.WriteLine("🚩 按鈕事件已觸發！");
+    }
+
+    private async Task HandleTestConnectionSimple()
+    {
+        Console.WriteLine("🔥 簡單版測試連線按鈕被點擊！");
+        testResult = "✅ 按鈕已觸發！";
+        isSuccess = true;
+        await InvokeAsync(StateHasChanged);
+    }
+}

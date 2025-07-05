@@ -1,0 +1,258 @@
+@page "/system-test"
+@rendermode InteractiveServer
+@using blazor_strategy_and_factory.Models
+@using blazor_strategy_and_factory.Services.Factory
+@using blazor_strategy_and_factory.Services.DataSources
+@using blazor_strategy_and_factory.Services.OutputComponents
+@using blazor_strategy_and_factory.Services
+@inject IPageFactory PageFactory
+@inject IDataSourceService DataSourceService
+@inject IOutputComponentService OutputComponentService
+@implements IDisposable
+
+<PageTitle>系統測試</PageTitle>
+
+<div class="container mt-4">
+    <h1>🧪 系統測試頁面</h1>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>測試結果</h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>正在測試系統...</p>
+                        </div>
+                    }
+                    else if (testResults.Any())
+                    {
+                        <div class="accordion" id="testResultsAccordion">
+                            @for (int i = 0; i < testResults.Count; i++)
+                            {
+                                var result = testResults[i];
+                                var uniqueId = $"test-{i}";
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading-@uniqueId">
+                                        <button class="accordion-button @(result.IsSuccess ? "" : "collapsed")" 
+                                                type="button" 
+                                                data-bs-toggle="collapse" 
+                                                data-bs-target="#collapse-@uniqueId" 
+                                                aria-expanded="@(result.IsSuccess ? "true" : "false")" 
+                                                aria-controls="collapse-@uniqueId">
+                                            @(result.IsSuccess ? "✅" : "❌") @result.TestName
+                                        </button>
+                                    </h2>
+                                    <div id="collapse-@uniqueId" 
+                                         class="accordion-collapse collapse @(result.IsSuccess ? "show" : "")" 
+                                         aria-labelledby="heading-@uniqueId" 
+                                         data-bs-parent="#testResultsAccordion">
+                                        <div class="accordion-body">
+                                            <strong>測試結果：</strong> @result.Message
+                                            @if (result.Details != null)
+                                            {
+                                                <div class="mt-2">
+                                                    <strong>詳細資訊：</strong>
+                                                    <pre><code>@result.Details</code></pre>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center">
+                            <button class="btn btn-primary" @onclick="RunTests">
+                                🚀 開始測試
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isLoading = false;
+    private List<TestResult> testResults = new();
+    private CancellationTokenSource? cancellationTokenSource;
+    
+    public class TestResult
+    {
+        public string TestName { get; set; } = "";
+        public bool IsSuccess { get; set; }
+        public string Message { get; set; } = "";
+        public string? Details { get; set; }
+    }
+    
+    private async Task RunTests()
+    {
+        if (isLoading) return; // 防止重複執行
+        
+        cancellationTokenSource?.Cancel();
+        cancellationTokenSource = new CancellationTokenSource();
+        
+        isLoading = true;
+        testResults.Clear();
+        StateHasChanged();
+        
+        try
+        {
+            // 測試資料源策略
+            await TestDataSourceStrategies(cancellationTokenSource.Token);
+            
+            // 測試工廠模式
+            await TestFactoryPattern(cancellationTokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // 測試被取消
+        }
+        catch (Exception ex)
+        {
+            testResults.Add(new TestResult
+            {
+                TestName = "系統錯誤",
+                IsSuccess = false,
+                Message = "測試過程中發生錯誤",
+                Details = ex.Message
+            });
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task TestDataSourceStrategies(CancellationToken cancellationToken = default)
+    {
+        var request = new FinancialDataRequest
+        {
+            // 移除過濾條件，以便測試所有資料
+            // Region = "台北",
+            // StartDate = DateTime.Now.AddDays(-30),
+            // EndDate = DateTime.Now
+        };
+        
+        var dataSourceNames = new[] { "員工資料", "財務記錄", "公司公告" };
+        
+        foreach (var dataSourceName in dataSourceNames)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            try
+            {
+                var strategy = DataSourceService.GetStrategy(dataSourceName);
+                if (strategy != null)
+                {
+                    var result = await strategy.FetchDataAsync(request);
+                    
+                    // 根據不同的資料源類型，正確計算資料筆數
+                    var dataCount = 0;
+                    if (result.IsSuccess)
+                    {
+                        if (result.Data.ContainsKey("RecordCount"))
+                        {
+                            dataCount = (int)result.Data["RecordCount"];
+                        }
+                        else if (result.Data.ContainsKey("Employees"))
+                        {
+                            var employees = result.Data["Employees"] as IEnumerable<object>;
+                            dataCount = employees?.Count() ?? 0;
+                        }
+                        else if (result.Data.ContainsKey("Records"))
+                        {
+                            var records = result.Data["Records"] as IEnumerable<object>;
+                            dataCount = records?.Count() ?? 0;
+                        }
+                        else if (result.Data.ContainsKey("Announcements"))
+                        {
+                            var announcements = result.Data["Announcements"] as IEnumerable<object>;
+                            dataCount = announcements?.Count() ?? 0;
+                        }
+                    }
+                    
+                    testResults.Add(new TestResult
+                    {
+                        TestName = $"資料源測試 - {dataSourceName}",
+                        IsSuccess = result.IsSuccess,
+                        Message = result.IsSuccess ? "測試成功" : "測試失敗",
+                        Details = result.IsSuccess ? 
+                            $"查詢到資料: {dataCount} 筆" : 
+                            string.Join(", ", result.Messages)
+                    });
+                }
+                else
+                {
+                    testResults.Add(new TestResult
+                    {
+                        TestName = $"資料源測試 - {dataSourceName}",
+                        IsSuccess = false,
+                        Message = "測試失敗",
+                        Details = "無法取得資料源策略"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                testResults.Add(new TestResult
+                {
+                    TestName = $"資料源測試 - {dataSourceName}",
+                    IsSuccess = false,
+                    Message = "測試失敗",
+                    Details = ex.Message
+                });
+            }
+        }
+    }
+    
+    private async Task TestFactoryPattern(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new FinancialDataRequest
+            {
+                Region = "台北",
+                StartDate = DateTime.Now.AddDays(-30),
+                EndDate = DateTime.Now
+            };
+            
+            var pageConfig = await PageFactory.CreatePageAsync(request);
+            
+            testResults.Add(new TestResult
+            {
+                TestName = "工廠模式測試",
+                IsSuccess = true,
+                Message = "工廠模式測試成功",
+                Details = $"成功創建頁面配置，包含 {pageConfig.DataSources.Count} 個資料源和 {pageConfig.OutputComponents.Count} 個輸出元件"
+            });
+        }
+        catch (Exception ex)
+        {
+            testResults.Add(new TestResult
+            {
+                TestName = "工廠模式測試",
+                IsSuccess = false,
+                Message = "工廠模式測試失敗",
+                Details = ex.Message
+            });
+        }
+    }
+    
+    public void Dispose()
+    {
+        cancellationTokenSource?.Cancel();
+        cancellationTokenSource?.Dispose();
+    }
+}
