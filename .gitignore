@@ -1,0 +1,5 @@
+# 忽略敏感設定檔
+appsettings.json
+appsettings.Development.json
+bin/
+obj/
