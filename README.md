@@ -5,7 +5,7 @@
 專案的核心特色是深度整合了「工廠模式 (Factory Pattern)」與「策略模式 (Strategy Pattern)」，使得系統在新增資料來源或調整輸出格式時，能最大限度地降低對現有程式碼的修改，符合軟體工程的「開放封閉原則」。
 
 ## 核心設計模式
-
+https://github.com/FelixChen1224/blazor-strategy-and-factory/blob/main/README.md
 這個專案的架構旨在建立一個**可擴展**且**易於維護**的系統。主要透過兩種設計模式實現：
 
 1.  **工廠模式 (Factory Pattern)**：負責**建立物件**。當您需要根據不同的條件（例如：使用者選擇的資料來源或報表類型）產生不同的物件時，工廠模式就非常有用。它將物件的建立邏輯封裝起來，讓您的主程式碼不用跟複雜的建立過程打交道。在本專案中，`DataSourceService` 和 `OutputComponentService` 扮演工廠的角色。
