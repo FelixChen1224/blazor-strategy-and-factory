@@ -26,7 +26,7 @@ graph TD
   
     subgraph Service["服務層"]
         B --> C["FinancialAnalysisService<br/>接收請求"]
-        C --> D["DataSourceService<br/>工廠模式"]
+        C --> D["DataSourceService<br/>策略模式"]
         D --> E{"決定資料來源策略"}
         E -->|財務記錄| F1["FinancialRecordDataSource"]
         E -->|員工資料| F2["EmployeeDataSource"]
