@@ -20,48 +20,47 @@ https://github.com/FelixChen1224/blazor-strategy-and-factory/blob/main/README.md
 
 ```mermaid
 graph TD
-    subgraph UI["使用者介面 (Blazor Page)"]
-        A["1. 使用者在 FinancialReport.razor<br/>選擇資料來源"] --> B{"2. 觸發查詢事件"}
+    subgraph UI["使用者介面層"]
+        A["使用者選擇資料來源<br/>FinancialReport.razor"] --> B["觸發查詢事件"]
     end
-    
-    subgraph Service["服務層 (Service Layer)"]
-        B --> C["3. FinancialAnalysisService<br/>接收請求"]
-        C --> D["4. DataSourceService (工廠)"]
-        D -->|根據資料來源名稱| E{"5. 決定使用哪個策略"}
-        E -->|"財務記錄"| F1["FinancialRecordDataSource<br/>(策略)"]
-        E -->|"員工資料"| F2["EmployeeDataSource<br/>(策略)"]
-        E -->|"公司重訊"| F3["CompanyAnnouncementDataSource<br/>(策略)"]
-        E -->|"其他..."| Fn["其他資料來源策略..."]
+  
+    subgraph Service["服務層"]
+        B --> C["FinancialAnalysisService<br/>接收請求"]
+        C --> D["DataSourceService<br/>工廠模式"]
+        D --> E{"決定資料來源策略"}
+        E -->|財務記錄| F1["FinancialRecordDataSource"]
+        E -->|員工資料| F2["EmployeeDataSource"]
+        E -->|公司重訊| F3["CompanyAnnouncementDataSource"]
+        E -->|其他| Fn["其他資料來源策略"]
     end
-    
-    subgraph Data["資料處理層 (Data Processing)"]
-        F1 --> G["6. 執行 FetchDataAsync"]
+  
+    subgraph Data["資料處理層"]
+        F1 --> G["執行 FetchDataAsync"]
         F2 --> G
         F3 --> G
         Fn --> G
-        G --> H["7. 從資料庫/API獲取資料"]
-        H --> I["8. 處理並封裝成<br/>FinancialDataResponse"]
+        G --> H["從資料庫/API獲取資料"]
+        H --> I["封裝成 FinancialDataResponse"]
     end
-    
-    subgraph Output["回傳與呈現"]
-        I --> J["9. 回傳結果給<br/>FinancialAnalysisService"]
-        J --> K["10. OutputComponentService (工廠)"]
-        K -->|根據資料類型| L{"11. 選擇對應的<br/>輸出元件策略"}
-        L -->|"財務記錄"| M1["FinancialRecordOutput<br/>(策略)"]
-        L -->|"員工資料"| M2["EmployeeOutput<br/>(策略)"]
-        L -->|"其他..."| Mn["其他輸出元件策略..."]
-        M1 --> N["12. 產生對應的<br/>RenderFragment"]
+  
+    subgraph Output["輸出渲染層"]
+        I --> J["回傳給 FinancialAnalysisService"]
+        J --> K["OutputComponentService<br/>工廠模式"]
+        K --> L{"選擇輸出元件策略"}
+        L -->|財務記錄| M1["FinancialRecordOutput"]
+        L -->|員工資料| M2["EmployeeOutput"]
+        L -->|其他| Mn["其他輸出元件策略"]
+        M1 --> N["產生 RenderFragment"]
         M2 --> N
         Mn --> N
-        N --> O["13. FinancialReport.razor<br/>渲染動態元件"]
+        N --> O["FinancialReport.razor<br/>動態渲染元件"]
     end
-    
-    %% 設定樣式
-    classDef uiClass fill:#D6EAF8,stroke:#3498DB,stroke-width:2px
-    classDef factoryClass fill:#F9E79F,stroke:#F39C12,stroke-width:2px
-    classDef strategyClass fill:#A9DFBF,stroke:#2ECC71,stroke-width:2px
-    classDef dataClass fill:#FAD7A0,stroke:#E67E22,stroke-width:2px
-    
+  
+    classDef uiClass fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef factoryClass fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef strategyClass fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef dataClass fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+  
     class A,O uiClass
     class D,K factoryClass
     class F1,F2,F3,Fn,M1,M2,Mn strategyClass
